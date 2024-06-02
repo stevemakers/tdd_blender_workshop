@@ -6,28 +6,78 @@
 class Blender():
     def __init__(self):
         self.ingredients = []
+        self.capacity = 500
 
-    def add_ingredients(self, ingredient):
-        self.ingredients.append(ingredient)
+    """
+    Adds a list of ingredients to the blender
+    Ingredient is an array of tuples containing grams and macronutrients
+    e.g.
+    [
+        (50, { "carbohyrdrate": 50", protein: "51", fat: "4", "calories": 45 })   
+        (20, { "carbohydrates": 50", protein: "52", fat: "40", "calories": 55 })   
+    ]
+    """
+    def add_ingredients(self, ingredients):
 
+        for ingredient in ingredients:
+            grams = ingredient[0]
+            macros = ingredient[1].keys()
+
+            for macro in macros:
+                # Adds a proportion of the macros
+                    ingredient[1][macro] *= (grams / 100)
+
+            self.ingredients.append(ingredient[1])
+
+    """
+    Blends all the ingredients that have been passed into the blender
+    Returns a Smoothie with the combined macronutrients
+    """
     def blend_ingredients(self):
-        smoothie = {
+        smoothie_macros = {
             "calories": 0,
             "carbohydrates": 0,
             "protein": 0,
-            "fat": 0
+            "fat": 0,
         }
 
+        # Check if ingredients goes overboard
+
         for ingredient in self.ingredients:
+            ## Make this self.ingredients.keys()
             macros = ingredient.keys()
 
             for macro in macros:
-                smoothie[macro] += ingredient[macro]
+                smoothie_macros[macro] += ingredient[macro]
 
-        return smoothie
-
-class Food():
+        return Smoothie(smoothie_macros)
+    
+class Smoothie():
     def __init__(self, macros):
         self.macros = macros
 
-# Inputs and outputs -- Blender outputs
+    """
+    Returns a health rating of the smoothie based on the macros
+    """
+    def categorize(self):
+        calories = self.macros["calories"]
+        carbohydrates = self.macros["carbohydrates"]
+        protein = self.macros["protein"]
+        fat = self.macros["fat"]
+
+        if (
+            calories <= 300
+            and carbohydrates <= 50
+            and protein >= 20
+            and fat <= 15
+        ):
+            return "Healthy"
+        elif (
+            calories <= 400
+            and carbohydrates <= 80
+            and protein <= 20
+            and fat <= 10
+        ):
+            return "Normal"
+        else:
+            return "Unhealthy"
