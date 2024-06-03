@@ -17,15 +17,14 @@ class Blender():
         (20, { "carbohydrates": 50", protein: "52", fat: "40", "calories": 55 })   
     ]
     """
-    def add_ingredients(self, ingredients):
-
+    def add_ingredients(self, ingredients):        
         for ingredient in ingredients:
             grams = ingredient[0]
             macros = ingredient[1].keys()
 
             for macro in macros:
                 # Adds a proportion of the macros
-                    ingredient[1][macro] *= (grams / 100)
+                ingredient[1][macro] *= (grams / 100)
 
             self.ingredients.append(ingredient[1])
 
@@ -34,6 +33,10 @@ class Blender():
     Returns a Smoothie with the combined macronutrients
     """
     def blend_ingredients(self):
+        total_grams = sum([ingredient[0] for ingredient in self.ingredients])
+        if total_grams > self.capacity:
+            raise ValueError("Exceeded blender capacity")
+        
         smoothie_macros = {
             "calories": 0,
             "carbohydrates": 0,
@@ -41,10 +44,7 @@ class Blender():
             "fat": 0,
         }
 
-        # Check if ingredients goes overboard
-
         for ingredient in self.ingredients:
-            ## Make this self.ingredients.keys()
             macros = ingredient.keys()
 
             for macro in macros:
