@@ -1,120 +1,85 @@
-from lib.blender import Blender, Smoothie
+from unittest.mock import Mock, patch
+from lib.blender import Blender, Ingredient, FoodAPI
 
 def test_initialise_blender_class():
     blender = Blender()
     assert isinstance(blender, Blender) == True
     assert blender.ingredients == []
 
+def test_add_ingredients_with_non_list_input():
+    blender = Blender()
+
+    try:
+        blender.add_ingredients("not a list")
+        assert False
+    except ValueError:
+        assert True
+
 def test_blender_adds_one_ingredient():
     blender = Blender()
+    blender.add_ingredients([Ingredient(50, "oats")])
+    assert blender.ingredients[0].grams == 50
+    assert blender.ingredients[0].name == "oats"
 
-    oats = {
-        "calories": 389,
-        "carbohydrates": 66.3,
-        "protein": 16.9,
-        "fat": 6.9,
-    }
-    blender.add_ingredients([(50, oats)])
-    assert blender.ingredients[0] == {
-        "calories": 194.5,
-        "carbohydrates": 33.15,
-        "protein": 8.45,
-        "fat": 3.45,
-        "carbohydrates": 33.15,
-    }
-    
 def test_blender_adds_multiple_ingredients():
     blender = Blender()
-    oats = {
-        "calories": 389,
-        "carbohydrates": 66.3,
-        "protein": 16.9,
-        "fat": 6.9,
-    }
-
-    apple = {
-        "calories": 95,
-        "carbohydrates": 25,
-        "protein": 0.5,
-        "fat": 0.3,
-    }
     blender.add_ingredients([
-        (150, apple),
-        (50, oats)
+        Ingredient(150, "apple"),
+        Ingredient(50, "oats")
     ])
 
-    assert blender.ingredients[1] == {
-        "calories": 194.5,
-        "carbohydrates": 33.15,
-        "protein": 8.45,
-        "fat": 3.45,
-    }
+    assert blender.ingredients[0].grams == 150
+    assert blender.ingredients[0].name == "apple"
+    assert blender.ingredients[1].grams == 50
+    assert blender.ingredients[1].name == "oats"
 
-def test_blender_blends_ingredients():
+@patch.object(FoodAPI, 'get_macros') 
+# In this function if anything calls a class called FoodAPI and a method called get_macros
+def test_blender_blends_ingredients(mock_get_macros):
+    # THEN rename it to mock_get_macros
+    mock_get_macros.return_value = {
+        'carbs': 37,
+        'protein': 4,
+        'fats': 2,
+        'calories': 185
+    }
     # Arrange
     blender = Blender()
-    oats = {
-        "calories": 389,
-        "carbohydrates": 66.3,
-        "protein": 16.9,
-        "fat": 6.9,
-    }
-
-    apple = {
-        "calories": 95,
-        "carbohydrates": 25,
-        "protein": 0.5,
-        "fat": 0.3,
-    }
 
     # Act
     blender.add_ingredients([
-        (150, apple),
-        (50, oats)
+        Ingredient(150, "apple"),
+        Ingredient(50, "oats")
     ])
     smoothie = blender.blend_ingredients()
 
     assert smoothie.macros == {
-        "calories": 337.0,
-        "carbohydrates": 70.65,
-        "protein": 9.2,
-        "fat": 3.9000000000000004
+        'carbs': 37,
+        'protein': 4,
+        'fats': 2,
+        'calories': 185
     }
 
-def test_initialise_smoothie_class():
-    smoothie = Smoothie(None)
-    assert isinstance(smoothie, Smoothie) == True
-    assert smoothie.macros == None
+def test_print_ingredients():
+    blender = Blender();
 
-def test_smoothie_returns_healthy_successfully():
-    health_pack = {
-        "calories": 299,
-        "carbohydrates": 49,
-        "protein": 20,
-        "fat": 15,
-    }
-    smoothie = Smoothie(health_pack)
-    health_rating = smoothie.categorize()
-    assert health_rating == "Healthy"
+    fake_apple = Mock()
+    # create instance of Mock called fake_apple
 
-def test_smoothie_returns_normal_successfully():
-    normal_pack = {
-        "calories": 400,
-        "carbohydrates": 80,
-        "protein": 19,
-        "fat": 10,
-    }
-    smoothie = Smoothie(normal_pack)
-    health_rating = smoothie.categorize()
-    assert health_rating == "Normal"
+    fake_apple.get_key_info.return_value = "50 grams of Apples"
+    # add a function called get_key_info which returns 50 grams of Apples
 
-def test_smoothie_returns_unhealthy_successfully():
-    unhealthy_pack = {
-        "calories": 601,
-        "carbohydrates": 181,
-        "protein": 3,
-        "fat": 100,
-    }
-    smoothie = Smoothie(unhealthy_pack)
-    health_rating = smoothie.categorize()
-    assert health_rating == "Unhealthy"
+    fake_berries = Mock()
+    fake_berries.get_key_info.return_value = "100 grams of Raspberries"
+    
+    fake_protein = Mock()
+    fake_protein.get_key_info.return_value = "25 grams of Protein Powder"
+    
+    blender.add_ingredients([
+        fake_apple,
+        fake_berries,
+        fake_protein
+    ])
+    print = blender.print_ingredients()
+
+    assert print == "50 grams of Apples + 100 grams of Raspberries + 25 grams of Protein Powder"

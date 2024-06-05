@@ -1,3 +1,7 @@
+from openai import OpenAI
+import json
+
+
 """
 1 A blender should have the ability to create smoothies from food
 2 Smoothies should store information about macronutrients and calories
@@ -6,78 +10,128 @@
 class Blender():
     def __init__(self):
         self.ingredients = []
-        self.capacity = 500
+        self.capacity = 10000
+        
+    """
+ 
+    """
+    def add_ingredients(self, ingredients):
+        if not isinstance(ingredients, list):
+            raise ValueError("Ingredients is not a list")
 
-    """
-    Adds a list of ingredients to the blender
-    Ingredient is an array of tuples containing grams and macronutrients
-    e.g.
-    [
-        (50, { "carbohyrdrate": 50", protein: "51", fat: "4", "calories": 45 })   
-        (20, { "carbohydrates": 50", protein: "52", fat: "40", "calories": 55 })   
-    ]
-    """
-    def add_ingredients(self, ingredients):        
         for ingredient in ingredients:
-            grams = ingredient[0]
-            macros = ingredient[1].keys()
-
-            for macro in macros:
-                # Adds a proportion of the macros
-                ingredient[1][macro] *= (grams / 100)
-
-            self.ingredients.append(ingredient[1])
+            self.ingredients.append(ingredient)
 
     """
     Blends all the ingredients that have been passed into the blender
     Returns a Smoothie with the combined macronutrients
     """
     def blend_ingredients(self):
-        total_grams = sum([ingredient[0] for ingredient in self.ingredients])
-        if total_grams > self.capacity:
-            raise ValueError("Exceeded blender capacity")
+        # total_grams = sum([ingredient.grams for ingredient in self.ingredients])
+        # if total_grams > self.capacity:
+        #     raise ValueError("Exceeded blender capacity")
         
-        smoothie_macros = {
-            "calories": 0,
-            "carbohydrates": 0,
-            "protein": 0,
-            "fat": 0,
-        }
+        foodAPI = FoodAPI()
+        ingredient_macros = foodAPI.get_macros(self.ingredients)
 
-        for ingredient in self.ingredients:
-            macros = ingredient.keys()
+        print("ingredient_macros =>", ingredient_macros)
 
-            for macro in macros:
-                smoothie_macros[macro] += ingredient[macro]
+        return Smoothie(ingredient_macros)
 
-        return Smoothie(smoothie_macros)
+
+    """
+    Prints the values of the ingredients
+    [Ingredient(50, 'oats'), Ingredient(100, 'blueberries'), Ingredient(25, "Protein Powder")]
+    e.g. 50 grams of oats + 100 grams of blueberries + 25 grams of Protein Powder
+    """
+    def print_ingredients(self):
+        string = ""
+        for index, ingredient in enumerate(self.ingredients):
+            if index is len(self.ingredients) - 1:
+                string += f'{ingredient.get_key_info()}'
+            else:
+                string += f'{ingredient.get_key_info()} + '
+                
+
+        return string
+
+class Ingredient():
+    def __init__(self, grams, name):
+        self.grams = grams
+        self.name = name
     
+    """
+    Prints the key information about the ingredients
+    e.g. 50g oats
+    """
+    def get_key_info(self):
+        return f'{self.grams}g {self.name}'
+
+
 class Smoothie():
     def __init__(self, macros):
         self.macros = macros
 
-    """
-    Returns a health rating of the smoothie based on the macros
-    """
-    def categorize(self):
-        calories = self.macros["calories"]
-        carbohydrates = self.macros["carbohydrates"]
-        protein = self.macros["protein"]
-        fat = self.macros["fat"]
+class FoodAPI():
+    def __init__(self):
+        self.client = OpenAI(
+            api_key=""
+        )
 
-        if (
-            calories <= 300
-            and carbohydrates <= 50
-            and protein >= 20
-            and fat <= 15
-        ):
-            return "Healthy"
-        elif (
-            calories <= 400
-            and carbohydrates <= 80
-            and protein <= 20
-            and fat <= 10
-        ):
-            return "Normal"
-        else:
-            return "Unhealthy"
+    '''
+    Takes in an array of ingredients where the 1st index of the ingredient is the grams, 2nd is the name of the ingredient
+    e.g. [[50, 'oats'], [100, 'blueberries']]
+
+    Returns the combined macronutrient profile as a dictionary
+    e.g {
+          "calories": 389,
+          "carbohydrates": 66.3,
+          "protein": 16.9,
+          "fat": 6.9,
+        }
+    '''
+    def get_macros(self, ingredients):
+        macros = self.get_macro_string(ingredients)
+        print("WE ACTUALLY GOT THE MACROS")
+        chat_completion = self.client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": f'Return a single json-like object of the combined macros (carbs, protein, fats, calories) of the following ingredients. {macros}, ensure the output can be used by json.load() to output a python dict'
+                }
+            ],
+            model="gpt-3.5-turbo",
+        )
+
+        message = chat_completion.choices[0].message.content
+        json_acceptable_string = message.replace("'", "\"")
+        return json.loads(json_acceptable_string)
+
+
+    '''
+    Takes in an array of ingredients where the 1st index of the ingredient is the grams, 2nd is the name of the ingredient
+    e.g. [[50, 'oats'], [100, 'blueberries']]
+
+    Returns a string that combines these for GPT 
+    e.g 50g oats + 100g blueberries
+    '''
+    def get_macro_string(self, ingredients):
+        string = ""
+        for index, ingredient in enumerate(ingredients):
+            grams = ingredient.grams
+            name = ingredient.name
+
+            if index is not len(ingredients) - 1:
+                string += f'{grams}g {name} + '
+            else:
+                string += f'{grams}g {name}'
+
+        return string
+    
+
+# blender = Blender()
+# blender.add_ingredients([(50, "oats"), (100, "Nutella"), (55, "Bourbon")])
+
+# smoothie = blender.blend_ingredients()
+# print(smoothie)
+# print(smoothie.macros)
